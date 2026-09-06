@@ -200,7 +200,7 @@ $("btnPng").onclick = async () => {
   const clone = el.cloneNode(true);
   clone.querySelectorAll("select,button").forEach((n) => n.remove());
   let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
-  try { css = await fetch("style.css").then((r) => r.text()); } catch {}
+  try { css = await fetch("css/style.css").then((r) => r.text()); } catch {}
   // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
   const tableXml = new XMLSerializer().serializeToString(clone);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
