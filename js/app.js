@@ -37,6 +37,8 @@ let state;
 try {
   state = JSON.parse(localStorage.getItem(KEY)) || defaultState();
 } catch { state = defaultState(); }
+const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+const leaveSet = () => new Set(state.leaves);
 // v1保存データに持ち場がなければ付与 (既存のメンバー・枠・休みは保持)
 if (!state.stations) {
   const st1 = uid(), st2 = uid();
@@ -45,8 +47,6 @@ if (!state.stations) {
   state.shifts.forEach((s) => (s.stationId = st1));
   save();
 }
-const save = () => localStorage.setItem(KEY, JSON.stringify(state));
-const leaveSet = () => new Set(state.leaves);
 
 function dates() {
   const out = [];
