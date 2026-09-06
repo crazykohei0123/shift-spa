@@ -25,4 +25,6 @@ td.short{color:#dc2626;font-weight:bold}
 .mrow input[type=text]{width:120px}
 .srow input[type=text]{width:90px}.srow input[type=number]{width:52px}
 select{max-width:110px}
+#stationList{display:inline-flex;gap:6px;flex-wrap:wrap}
+.mrow .st{font-size:12px;white-space:nowrap}
 @media print{header,.card:first-child,.card:nth-child(2) .row,#memberList,.hint,select,.chip button,#btnAuto,#btnCsv,#btnPng,#btnReset,#btnAddShift,#btnAddMember{display:none!important}body{background:#fff}.card{box-shadow:none}}
