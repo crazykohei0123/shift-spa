@@ -2,12 +2,12 @@
 
 アルバイトのシフトを自動作成するBackendなしSPA。依存ライブラリなし (Vanilla JS + HTML + CSS)。
 
-## 使い方
+## 使うには
 
-```sh
-python3 -m http.server -d . 8000
-# http://localhost:8000 を開く
-```
+- **ブラウザで開くだけ (推奨)**: https://crazykohei0123.github.io/shift-spa/ にアクセスするだけ。インストール・サーバ不要。
+- **ローカルで使う**: リポジトリをダウンロード (Code → Download ZIP) して `index.html` をブラウザで開くだけ。Webサーバの起動は不要。
+
+## 使い方
 
 1. **期間・シフト枠**: 開始〜終了日を指定、シフト枠 (名前・時間帯・人数・責任者数) を追加
 2. **メンバー・休み希望**: 名前を追加、表のマスをクリックで「休」トグル、責任者に「責」チェック
@@ -30,5 +30,5 @@ python3 -m http.server -d . 8000
 ## 構成
 
 - `index.html` — UI
-- `style.css` — 表スタイル + 印刷用
-- `app.js` — 状態管理・自動割付・出力
+- `css/style.css` — 表スタイル + 印刷用
+- `js/app.js` — 状態管理・自動割付・出力
