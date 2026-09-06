@@ -179,6 +179,24 @@ $("resultTable").onchange = $("resultTable").onclick = (e) => {
   }
 };
 $("btnAuto").onclick = autoAssign;
+// 結果表をPNG保存。SVG foreignObject→canvasで依存なし。select/×は除外して出力。
+// ponytail: 15日分まで一枚絵、超えたら横長になるだけで分割はしない
+$("btnPng").onclick = async () => {
+  const el = $("resultTable");
+  const w = el.scrollWidth, h = el.scrollHeight;
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll("select,button").forEach((n) => n.remove());
+  let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
+  try { css = await fetch("style.css").then((r) => r.text()); } catch {}
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${clone.outerHTML}</div></foreignObject></svg>`;
+  const img = new Image();
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  await img.decode();
+  const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2;
+  const x = c.getContext("2d"); x.scale(2, 2);
+  x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+  Object.assign(document.createElement("a"), { download: "shift.png", href: c.toDataURL("image/png") }).click();
+};
 $("btnReset").onclick = () => { if (confirm("初期化しますか?")) { state = defaultState(); save(); renderAll(); } };
 $("btnCsv").onclick = async () => {
   const rows = [["日付", ...state.shifts.flatMap((s) => [s.name, s.time])]];
