@@ -252,7 +252,8 @@ $("btnAuto").onclick = autoAssign;
 // 結果表をPNG保存。SVG foreignObject→canvasで依存なし。select/×は除外して出力。
 $("btnPng").onclick = async () => {
   const el = $("resultTable");
-  const w = el.scrollWidth, h = el.scrollHeight;
+  // SVG内で再レイアウトすると行高の端数が蓄積して数px背が高くなるためslackを足す
+  const w = el.scrollWidth, h = el.scrollHeight + 10;
   // ponytail: 左右上16px・下28px固定、15日分まで一枚絵
   const PX = 16, PT = 16, PB = 28, W = w + PX * 2, H = h + PT + PB;
   const clone = el.cloneNode(true);
