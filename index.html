@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シフト自動作成</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<h1>シフト自動作成</h1>
+<div class="actions">
+<button id="btnAuto">自動作成</button>
+<button id="btnCsv">CSVコピー</button>
+<button id="btnReset">リセット</button>
+</div>
+</header>
+
+<main>
+<section class="card">
+<h2>1. 期間・シフト枠</h2>
+<div class="row">
+<label>開始 <input type="date" id="startDate"></label>
+<label>終了 <input type="date" id="endDate"></label>
+<span class="hint">最大31日・クリックで休み/結果が更新</span>
+</div>
+<div id="shiftList"></div>
+<button id="btnAddShift">+ シフト枠を追加</button>
+</section>
+
+<section class="card">
+<h2>2. メンバー・休み希望</h2>
+<div class="row">
+<input id="memberName" placeholder="名前を入力" maxlength="20">
+<button id="btnAddMember">+ 追加</button>
+<span class="hint">下の表のマスをクリックで「休」トグル。責=責任者</span>
+</div>
+<div id="memberList"></div>
+<div class="table-wrap"><table id="leaveTable"></table></div>
+</section>
+
+<section class="card">
+<h2>3. シフト結果 <span id="summary" class="hint"></span></h2>
+<div class="table-wrap"><table id="resultTable"></table></div>
+<p class="hint">セル内の × で外す、下の選択肢で追加。赤字は不足。</p>
+</section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
