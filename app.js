@@ -201,10 +201,13 @@ $("btnPng").onclick = async () => {
   clone.querySelectorAll("select,button").forEach((n) => n.remove());
   let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
   try { css = await fetch("style.css").then((r) => r.text()); } catch {}
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css}</style>${clone.outerHTML}</div></foreignObject></svg>`;
+  // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
+  const tableXml = new XMLSerializer().serializeToString(clone);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
   const img = new Image();
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  await img.decode();
+  try { await img.decode(); }
+  catch { alert("PNG化に失敗しました"); return; }
   const c = document.createElement("canvas"); c.width = w * 2; c.height = h * 2;
   const x = c.getContext("2d"); x.scale(2, 2);
   x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
