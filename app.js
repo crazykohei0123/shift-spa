@@ -18,8 +18,9 @@ function defaultState() {
       { id: m3, name: "鈴木", isLeader: false },
     ],
     shifts: [
-      { id: uid(), name: "早番", time: "9:00-13:00", need: 2, needLeader: 1 },
-      { id: uid(), name: "遅番", time: "13:00-17:00", need: 2, needLeader: 0 },
+      { id: uid(), name: "朝番", time: "9:00-14:00", need: 2, needLeader: 1 },
+      { id: uid(), name: "昼番", time: "10:00-16:00", need: 2, needLeader: 0 },
+      { id: uid(), name: "夜番", time: "16:00-21:00", need: 2, needLeader: 1 },
     ],
     leaves: [], // ["memberId|YYYY-MM-DD"]
     result: {}, // {"YYYY-MM-DD|shiftId": [memberId]}
@@ -140,24 +141,36 @@ $("btnAddShift").onclick = () => {
   state.shifts.push({ id: uid(), name: "新番", time: "9:00-12:00", need: 1, needLeader: 0 });
   save(); renderAll();
 };
-$("memberList").onchange = $("memberList").onclick = (e) => {
+$("memberList").onclick = (e) => {
+  if (e.target.dataset.act !== "del") return;
   const row = e.target.closest(".mrow"); if (!row) return;
   const m = memberById(row.dataset.id); if (!m) return;
-  if (e.target.dataset.act === "del") {
-    state.members = state.members.filter((x) => x.id !== m.id);
-    state.leaves = state.leaves.filter((k) => !k.startsWith(m.id + "|"));
-  } else if (e.target.dataset.k === "isLeader") m.isLeader = e.target.checked;
-  else if (e.target.dataset.k === "name") m.name = e.target.value;
+  state.members = state.members.filter((x) => x.id !== m.id);
+  state.leaves = state.leaves.filter((k) => !k.startsWith(m.id + "|"));
   save(); renderAll();
 };
-$("shiftList").onchange = $("shiftList").onclick = (e) => {
+$("memberList").onchange = (e) => {
+  const row = e.target.closest(".mrow"); if (!row) return;
+  const m = memberById(row.dataset.id); if (!m) return;
+  if (e.target.dataset.k === "isLeader") m.isLeader = e.target.checked;
+  else if (e.target.dataset.k === "name") m.name = e.target.value;
+  else return;
+  save(); renderAll();
+};
+$("shiftList").onclick = (e) => {
+  if (e.target.dataset.act !== "del") return;
+  const row = e.target.closest(".srow"); if (!row) return;
+  state.shifts = state.shifts.filter((x) => x.id !== row.dataset.id);
+  save(); renderShifts(); renderResult();
+};
+$("shiftList").onchange = (e) => {
   const row = e.target.closest(".srow"); if (!row) return;
   const s = state.shifts.find((x) => x.id === row.dataset.id); if (!s) return;
-  if (e.target.dataset.act === "del") state.shifts = state.shifts.filter((x) => x.id !== s.id);
-  else if (e.target.dataset.k === "name") s.name = e.target.value;
+  if (e.target.dataset.k === "name") s.name = e.target.value;
   else if (e.target.dataset.k === "time") s.time = e.target.value;
   else if (e.target.dataset.k === "need") s.need = Math.max(1, +e.target.value || 1);
   else if (e.target.dataset.k === "needLeader") s.needLeader = Math.max(0, +e.target.value || 0);
+  else return;
   save(); renderShifts(); renderResult();
 };
 $("leaveTable").onclick = (e) => {
