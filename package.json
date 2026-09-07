@@ -1,1 +1,1 @@
-{"name":"shift-spa","version":"1.1.0","private":true,"scripts":{"build":"tsc","test":"npm run build && node tests/shift-test.cjs && node tests/shift-test2.cjs && node tests/shift-test3.cjs"},"devDependencies":{"typescript":"^5.6.0"}}
+{"name":"shift-spa","version":"1.1.0","private":true,"scripts":{"build":"tsc","test":"npm run build && node --test tests/*.test.cjs"},"devDependencies":{"typescript":"^5.6.0"}}
