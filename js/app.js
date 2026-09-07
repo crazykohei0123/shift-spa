@@ -1,5 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
+const APP_VERSION = "1.0.0";
 const $ = (id) => document.getElementById(id);
 const uid = () => Math.random().toString(36).slice(2, 9);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -282,4 +283,5 @@ $("btnCsv").onclick = async () => {
   catch { prompt("コピーしてください", csv); }
 };
 
+$("appVer").textContent = "v" + APP_VERSION;
 renderAll();

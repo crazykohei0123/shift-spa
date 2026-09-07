@@ -27,4 +27,17 @@ td.short{color:#dc2626;font-weight:bold}
 select{max-width:110px}
 #stationList{display:inline-flex;gap:6px;flex-wrap:wrap}
 .mrow .st{font-size:12px;white-space:nowrap}
+footer{text-align:center;color:#71717a;font-size:12px;padding:16px}
+/* iPhone 17 (402x874) などの小画面向け: ズーム防止・タップ領域・はみ出し対策 */
+@media (max-width:480px){
+main{padding:8px}
+header{flex-wrap:wrap;gap:8px}
+header .actions{display:flex;flex-wrap:wrap;gap:6px}
+button{padding:10px 12px;min-height:44px;font-size:15px}
+input,select{font-size:16px;min-height:44px}
+table{font-size:12px}
+td.leave{height:44px;min-width:48px}
+.mrow input[type=text]{width:100px}
+#stationName,#memberName{flex:1;min-width:0}
+}
 @media print{header,.card:first-child,.card:nth-child(2) .row,#memberList,.hint,select,.chip button,#btnAuto,#btnCsv,#btnPng,#btnReset,#btnAddShift,#btnAddMember{display:none!important}body{background:#fff}.card{box-shadow:none}}
