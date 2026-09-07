@@ -4,13 +4,13 @@ header h1{font-size:18px;margin:0}
 button{cursor:pointer;border:1px solid #d4d4d8;background:#fff;border-radius:6px;padding:5px 10px}
 header button{background:#fff}
 button:hover{background:#e4e4e7}
-main{max-width:1100px;margin:0 auto;padding:12px;display:grid;gap:12px}
-.card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+main{max-width:1100px;margin:0 auto;padding:12px;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.card{background:#fff;border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);min-width:0}
 h2{font-size:15px;margin:0 0 8px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .hint{font-size:12px;color:#71717a}
-.table-wrap{overflow-x:auto}
-table{border-collapse:collapse;font-size:13px;min-width:100%}
+.table-wrap{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:13px;min-width:100%;width:max-content}
 th,td{border:1px solid #e4e4e7;padding:4px 6px;text-align:center;white-space:nowrap}
 th{background:#fafafa;position:sticky;top:0}
 td.leave{cursor:pointer;user-select:none;min-width:44px;height:30px}
