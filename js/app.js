@@ -1,6 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.1";
 const $ = (id) => document.getElementById(id);
 const $input = (id) => document.getElementById(id);
 const tgt = (e) => e.target;
@@ -333,69 +333,75 @@ $("leaveTable").onclick = (e) => {
 });
 $("btnAuto").onclick = autoAssign;
 // 結果表をPNG保存。SVG foreignObject→canvasで依存なし。select/×は除外して出力。
+// 遷移・data URLなし。進捗と失敗理由はあらかじめ用意した枠内に表示する。
 $("btnPng").onclick = async () => {
-    const el = $("resultTable");
-    // SVG内で再レイアウトすると行高の端数が蓄積して数px背が高くなるためslackを足す
-    const w = el.scrollWidth, h = el.scrollHeight + 10;
-    // ponytail: 左右上16px・下28px固定、15日分まで一枚絵
-    const PX = 16, PT = 16, PB = 28, W = w + PX * 2, H = h + PT + PB;
-    const clone = el.cloneNode(true);
-    clone.querySelectorAll("select,button").forEach((n) => n.remove());
-    let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
+    const card = $("pngCard"), img = $("pngImg"), msg = $("pngMsg");
+    const say = (t) => { msg.textContent = t; };
+    card.hidden = false;
     try {
-        css = await fetch("css/style.css").then((r) => r.text());
-    }
-    catch { }
-    // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
-    const tableXml = new XMLSerializer().serializeToString(clone);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="${PX}" y="${PT}" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
-    // data:URLはiOSでサイズ制限に当たり開けないためBlob URLを使う
-    const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
-    try {
-        const img = new Image();
+        say("生成中…");
+        const el = $("resultTable");
+        // SVG内で再レイアウトすると行高の端数が蓄積して数px背が高くなるためslackを足す
+        const w = el.scrollWidth, h = el.scrollHeight + 10;
+        if (!w || !h)
+            throw new Error("表が空です");
+        // ponytail: 左右上16px・下28px固定、15日分まで一枚絵
+        const PX = 16, PT = 16, PB = 28, W = w + PX * 2, H = h + PT + PB;
+        const clone = el.cloneNode(true);
+        clone.querySelectorAll("select,button").forEach((n) => n.remove());
+        let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
         try {
-            await new Promise((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("img")); img.src = svgUrl; });
-        }
-        catch {
-            alert("PNG化に失敗しました");
-            return;
-        }
-        const c = document.createElement("canvas");
-        c.width = W * 2;
-        c.height = H * 2;
-        const x = c.getContext("2d");
-        x.scale(2, 2);
-        x.fillStyle = "#fff";
-        x.fillRect(0, 0, W, H);
-        x.drawImage(img, 0, 0, W, H);
-        const blob = await new Promise((res) => c.toBlob(res, "image/png"));
-        if (!blob) {
-            alert("PNG化に失敗しました");
-            return;
-        }
-        // PCは自動ダウンロード、タッチ端末は共有シート→不可なら頁内表示(長押し保存)
-        if (!matchMedia("(pointer: coarse)").matches) {
-            Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
-            return;
-        }
-        try {
-            const file = new File([blob], "shift.png", { type: "image/png" });
-            if (navigator.canShare?.({ files: [file] })) {
-                await navigator.share({ files: [file], title: "シフト表" });
-                return;
-            }
+            css = await fetch("css/style.css").then((r) => r.text());
         }
         catch { }
-        if (pngUrl)
-            URL.revokeObjectURL(pngUrl);
-        pngUrl = URL.createObjectURL(blob);
-        $("pngImg").src = pngUrl;
-        $("pngCard").hidden = false;
-        $("pngCard").scrollIntoView();
+        // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
+        const tableXml = new XMLSerializer().serializeToString(clone);
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="${PX}" y="${PT}" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
+        // data:URLはiOSでサイズ制限に当たり開けないためBlob URLを使う
+        const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+        try {
+            const image = new Image();
+            await new Promise((res, rej) => { image.onload = () => res(); image.onerror = () => rej(new Error("画像化に失敗")); image.src = svgUrl; });
+            const c = document.createElement("canvas");
+            c.width = W * 2;
+            c.height = H * 2;
+            const x = c.getContext("2d");
+            x.scale(2, 2);
+            x.fillStyle = "#fff";
+            x.fillRect(0, 0, W, H);
+            x.drawImage(image, 0, 0, W, H);
+            const blob = await new Promise((res) => c.toBlob(res, "image/png"));
+            if (!blob)
+                throw new Error("PNG化に失敗");
+            // PCは自動ダウンロード、タッチ端末は共有シート→不可なら枠内に表示(長押し保存)
+            if (!matchMedia("(pointer: coarse)").matches) {
+                Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+                say("ダウンロードを開始しました");
+                return;
+            }
+            try {
+                const file = new File([blob], "shift.png", { type: "image/png" });
+                if (navigator.canShare?.({ files: [file] })) {
+                    await navigator.share({ files: [file], title: "シフト表" });
+                    say("共有シートを開きました");
+                    return;
+                }
+            }
+            catch { }
+            if (pngUrl)
+                URL.revokeObjectURL(pngUrl);
+            pngUrl = URL.createObjectURL(blob);
+            img.src = pngUrl;
+            say("画像を長押し → 「写真に追加」で保存できます");
+        }
+        finally {
+            URL.revokeObjectURL(svgUrl);
+        }
     }
-    finally {
-        URL.revokeObjectURL(svgUrl);
+    catch (e) {
+        say(`失敗: ${e instanceof Error ? e.message : String(e)}`);
     }
+    card.scrollIntoView();
 };
 let pngUrl = "";
 $("btnPngClose").onclick = () => {
