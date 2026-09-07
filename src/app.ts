@@ -1,7 +1,7 @@
 "use strict";
 
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 interface Station { id: string; name: string; }
 interface Member { id: string; name: string; isLeader: boolean; stationIds: string[]; }
@@ -300,13 +300,26 @@ $("btnPng").onclick = async () => {
     x.fillStyle = "#fff"; x.fillRect(0, 0, W, H); x.drawImage(img, 0, 0, W, H);
     const blob = await new Promise<Blob | null>((res) => c.toBlob(res, "image/png"));
     if (!blob) { alert("PNG化に失敗しました"); return; }
-    // iOSはa[download]無視のため共有シート優先、非対応はBlobを開く(長押し保存可)
+    // PCは自動ダウンロード、タッチ端末は共有シート→不可なら頁内表示(長押し保存)
+    if (!matchMedia("(pointer: coarse)").matches) {
+      Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+      return;
+    }
     try {
       const file = new File([blob], "shift.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "シフト表" }); return; }
     } catch {}
-    Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+    if (pngUrl) URL.revokeObjectURL(pngUrl);
+    pngUrl = URL.createObjectURL(blob);
+    ($("pngImg") as HTMLImageElement).src = pngUrl;
+    $("pngCard").hidden = false;
+    $("pngCard").scrollIntoView();
   } finally { URL.revokeObjectURL(svgUrl); }
+};
+let pngUrl = "";
+$("btnPngClose").onclick = () => {
+  $("pngCard").hidden = true;
+  if (pngUrl) { URL.revokeObjectURL(pngUrl); pngUrl = ""; }
 };
 $("btnReset").onclick = () => { if (confirm("初期化しますか?")) { state = defaultState(); save(); renderAll(); } };
 $("btnCsv").onclick = async () => {

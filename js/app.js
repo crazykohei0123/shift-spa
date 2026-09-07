@@ -1,6 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 const $ = (id) => document.getElementById(id);
 const $input = (id) => document.getElementById(id);
 const tgt = (e) => e.target;
@@ -373,7 +373,11 @@ $("btnPng").onclick = async () => {
             alert("PNG化に失敗しました");
             return;
         }
-        // iOSはa[download]無視のため共有シート優先、非対応はBlobを開く(長押し保存可)
+        // PCは自動ダウンロード、タッチ端末は共有シート→不可なら頁内表示(長押し保存)
+        if (!matchMedia("(pointer: coarse)").matches) {
+            Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+            return;
+        }
         try {
             const file = new File([blob], "shift.png", { type: "image/png" });
             if (navigator.canShare?.({ files: [file] })) {
@@ -382,10 +386,23 @@ $("btnPng").onclick = async () => {
             }
         }
         catch { }
-        Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+        if (pngUrl)
+            URL.revokeObjectURL(pngUrl);
+        pngUrl = URL.createObjectURL(blob);
+        $("pngImg").src = pngUrl;
+        $("pngCard").hidden = false;
+        $("pngCard").scrollIntoView();
     }
     finally {
         URL.revokeObjectURL(svgUrl);
+    }
+};
+let pngUrl = "";
+$("btnPngClose").onclick = () => {
+    $("pngCard").hidden = true;
+    if (pngUrl) {
+        URL.revokeObjectURL(pngUrl);
+        pngUrl = "";
     }
 };
 $("btnReset").onclick = () => { if (confirm("初期化しますか?")) {
