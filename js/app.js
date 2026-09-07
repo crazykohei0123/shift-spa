@@ -1,6 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.2.1";
+const APP_VERSION = "1.2.2";
 const $ = (id) => document.getElementById(id);
 const $input = (id) => document.getElementById(id);
 const tgt = (e) => e.target;
@@ -332,7 +332,80 @@ $("leaveTable").onclick = (e) => {
     }
 });
 $("btnAuto").onclick = autoAssign;
-// 結果表をPNG保存。SVG foreignObject→canvasで依存なし。select/×は除外して出力。
+// --- PNG出力: 表をcanvasに直接描画。SVG foreignObject経由はChromeで汚染taintのため不使用。
+const PNG_FONT = "13px system-ui, sans-serif";
+const PNG_PX = 16, PNG_PT = 16, PNG_PB = 28; // ponytail: 余白固定
+function cellText(d, s) {
+    const ids = state.result[d + "|" + s.id] || [];
+    const names = ids.map((id) => memberById(id)?.name || "").filter(Boolean).join("・") || "不足";
+    const miss = s.need - ids.length;
+    return { top: names, bottom: miss > 0 ? `要${miss}` : "", short: miss > 0 };
+}
+function tableLayout(measure) {
+    const ds = dates();
+    const headTop = ["日付", ...state.shifts.map((s) => `${s.name}${stationName(s.stationId) ? `(${stationName(s.stationId)})` : ""}`)];
+    const headBot = ["", ...state.shifts.map((s) => `${s.time} ${s.need}人${s.needLeader ? `(責${s.needLeader})` : ""}`)];
+    const body = ds.map((d) => ({ date: `${md(d)}(${wday(d)})`, cells: state.shifts.map((s) => cellText(d, s)) }));
+    const widths = headTop.map((_, c) => {
+        const texts = c === 0
+            ? [headTop[0], ...body.map((r) => r.date)]
+            : [headTop[c], headBot[c], ...body.map((r) => r.cells[c - 1].top), ...body.map((r) => r.cells[c - 1].bottom)];
+        return Math.ceil(Math.max(0, ...texts.map(measure))) + 12;
+    });
+    const headerH = 40, rowH = 36;
+    return { widths, headerH, rowH, W: widths.reduce((a, b) => a + b, 0) + PNG_PX * 2, H: PNG_PT + headerH + rowH * ds.length + PNG_PB };
+}
+function drawTable(ctx, L) {
+    const ds = dates();
+    ctx.font = PNG_FONT;
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, L.W, L.H);
+    const xs = [PNG_PX];
+    L.widths.forEach((w) => xs.push(xs[xs.length - 1] + w));
+    const cx = (c) => (xs[c] + xs[c + 1]) / 2;
+    // ヘッダ
+    ctx.fillStyle = "#eee";
+    ctx.fillRect(PNG_PX, PNG_PT, L.W - PNG_PX * 2, L.headerH);
+    ctx.fillStyle = "#000";
+    ctx.fillText("日付", cx(0), PNG_PT + 13);
+    state.shifts.forEach((s, i) => {
+        const st = stationName(s.stationId);
+        ctx.fillText(`${s.name}${st ? `(${st})` : ""}`, cx(i + 1), PNG_PT + 13);
+        ctx.fillStyle = "#555";
+        ctx.fillText(`${s.time} ${s.need}人${s.needLeader ? `(責${s.needLeader})` : ""}`, cx(i + 1), PNG_PT + 29);
+        ctx.fillStyle = "#000";
+    });
+    // 本体
+    ds.forEach((d, r) => {
+        const y = PNG_PT + L.headerH + r * L.rowH;
+        ctx.fillStyle = "#000";
+        ctx.fillText(`${md(d)}(${wday(d)})`, cx(0), y + L.rowH / 2);
+        state.shifts.forEach((s, i) => {
+            const ct = cellText(d, s);
+            ctx.fillStyle = ct.short ? "#dc2626" : "#000";
+            ctx.fillText(ct.top, cx(i + 1), y + 12);
+            if (ct.bottom)
+                ctx.fillText(ct.bottom, cx(i + 1), y + 26);
+        });
+    });
+    // 罫線
+    ctx.strokeStyle = "#999";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    xs.forEach((x) => { ctx.moveTo(x, PNG_PT); ctx.lineTo(x, L.H - PNG_PB); });
+    ctx.moveTo(PNG_PX, PNG_PT);
+    ctx.lineTo(L.W - PNG_PX, PNG_PT);
+    ctx.moveTo(PNG_PX, PNG_PT + L.headerH);
+    ctx.lineTo(L.W - PNG_PX, PNG_PT + L.headerH);
+    ds.forEach((_, r) => {
+        const y = PNG_PT + L.headerH + (r + 1) * L.rowH;
+        ctx.moveTo(PNG_PX, y);
+        ctx.lineTo(L.W - PNG_PX, y);
+    });
+    ctx.stroke();
+}
 // 遷移・data URLなし。進捗と失敗理由はあらかじめ用意した枠内に表示する。
 $("btnPng").onclick = async () => {
     const card = $("pngCard"), img = $("pngImg"), msg = $("pngMsg");
@@ -340,63 +413,39 @@ $("btnPng").onclick = async () => {
     card.hidden = false;
     try {
         say("生成中…");
-        const el = $("resultTable");
-        // SVG内で再レイアウトすると行高の端数が蓄積して数px背が高くなるためslackを足す
-        const w = el.scrollWidth, h = el.scrollHeight + 10;
-        if (!w || !h)
-            throw new Error("表が空です");
-        // ponytail: 左右上16px・下28px固定、15日分まで一枚絵
-        const PX = 16, PT = 16, PB = 28, W = w + PX * 2, H = h + PT + PB;
-        const clone = el.cloneNode(true);
-        clone.querySelectorAll("select,button").forEach((n) => n.remove());
-        let css = "table{border-collapse:collapse;font-size:13px}th,td{border:1px solid #999;padding:4px 6px;background:#fff}th{background:#eee}";
-        try {
-            css = await fetch("css/style.css").then((r) => r.text());
+        const c = document.createElement("canvas");
+        const meas = c.getContext("2d");
+        meas.font = PNG_FONT;
+        const L = tableLayout((t) => meas.measureText(t).width);
+        c.width = L.W * 2;
+        c.height = L.H * 2; // 2倍解像度
+        const ctx = c.getContext("2d");
+        ctx.scale(2, 2);
+        drawTable(ctx, L);
+        // 文字と罫線のみの描画のため汚染なし。全ブラウザでtoBlob可。
+        const blob = await new Promise((res) => c.toBlob(res, "image/png"));
+        if (!blob)
+            throw new Error("PNG化に失敗");
+        // PCは自動ダウンロード、タッチ端末は共有シート→不可なら枠内に表示(長押し保存)
+        if (!matchMedia("(pointer: coarse)").matches) {
+            Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+            say("ダウンロードを開始しました");
+            return;
         }
-        catch { }
-        // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
-        const tableXml = new XMLSerializer().serializeToString(clone);
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="${PX}" y="${PT}" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
-        // data:URLはiOSでサイズ制限に当たり開けないためBlob URLを使う
-        const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
         try {
-            const image = new Image();
-            await new Promise((res, rej) => { image.onload = () => res(); image.onerror = () => rej(new Error("画像化に失敗")); image.src = svgUrl; });
-            const c = document.createElement("canvas");
-            c.width = W * 2;
-            c.height = H * 2;
-            const x = c.getContext("2d");
-            x.scale(2, 2);
-            x.fillStyle = "#fff";
-            x.fillRect(0, 0, W, H);
-            x.drawImage(image, 0, 0, W, H);
-            const blob = await new Promise((res) => c.toBlob(res, "image/png"));
-            if (!blob)
-                throw new Error("PNG化に失敗");
-            // PCは自動ダウンロード、タッチ端末は共有シート→不可なら枠内に表示(長押し保存)
-            if (!matchMedia("(pointer: coarse)").matches) {
-                Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
-                say("ダウンロードを開始しました");
+            const file = new File([blob], "shift.png", { type: "image/png" });
+            if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], title: "シフト表" });
+                say("共有シートを開きました");
                 return;
             }
-            try {
-                const file = new File([blob], "shift.png", { type: "image/png" });
-                if (navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({ files: [file], title: "シフト表" });
-                    say("共有シートを開きました");
-                    return;
-                }
-            }
-            catch { }
-            if (pngUrl)
-                URL.revokeObjectURL(pngUrl);
-            pngUrl = URL.createObjectURL(blob);
-            img.src = pngUrl;
-            say("画像を長押し → 「写真に追加」で保存できます");
         }
-        finally {
-            URL.revokeObjectURL(svgUrl);
-        }
+        catch { }
+        if (pngUrl)
+            URL.revokeObjectURL(pngUrl);
+        pngUrl = URL.createObjectURL(blob);
+        img.src = pngUrl;
+        say("画像を長押し → 「写真に追加」で保存できます");
     }
     catch (e) {
         say(`失敗: ${e instanceof Error ? e.message : String(e)}`);
