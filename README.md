@@ -1,6 +1,11 @@
 # shift-spa
 
-アルバイトのシフトを自動作成するBackendなしSPA。依存ライブラリなし (Vanilla JS + HTML + CSS)。
+アルバイトのシフトを自動作成するBackendなしSPA。TypeScript + HTML + CSS (実行時依存なし)。
+
+## 開発
+
+- `npm install` → `npm run build` (`src/app.ts` → `js/app.js`)
+- `npm test` (ビルド + 検証)
 
 ## 使うには
 
@@ -31,4 +36,6 @@
 
 - `index.html` — UI
 - `css/style.css` — 表スタイル + 印刷用
-- `js/app.js` — 状態管理・自動割付・出力
+- `src/app.ts` — ソース (TypeScript, `npm run build` で `js/app.js` に変換)
+- `js/app.js` — ビルド成果物 (コミット済み、そのまま配信)
+- `tests/` — Nodeスタブ検証 (`npm test`)
