@@ -264,14 +264,24 @@ $("btnPng").onclick = async () => {
   // outerHTMLは<br>等がXML不正になるためXMLSerializerで直列化する
   const tableXml = new XMLSerializer().serializeToString(clone);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><foreignObject x="${PX}" y="${PT}" width="${w}" height="${h}"><div xmlns="http://www.w3.org/1999/xhtml"><style>${css.replaceAll("&", "&amp;")}</style>${tableXml}</div></foreignObject></svg>`;
-  const img = new Image();
-  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  try { await img.decode(); }
-  catch { alert("PNG化に失敗しました"); return; }
-  const c = document.createElement("canvas"); c.width = W * 2; c.height = H * 2;
-  const x = c.getContext("2d"); x.scale(2, 2);
-  x.fillStyle = "#fff"; x.fillRect(0, 0, W, H); x.drawImage(img, PX, PT, w, h);
-  Object.assign(document.createElement("a"), { download: "shift.png", href: c.toDataURL("image/png") }).click();
+  // data:URLはiOSでサイズ制限に当たり開けないためBlob URLを使う
+  const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+  try {
+    const img = new Image();
+    try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = svgUrl; }); }
+    catch { alert("PNG化に失敗しました"); return; }
+    const c = document.createElement("canvas"); c.width = W * 2; c.height = H * 2;
+    const x = c.getContext("2d"); x.scale(2, 2);
+    x.fillStyle = "#fff"; x.fillRect(0, 0, W, H); x.drawImage(img, 0, 0, W, H);
+    const blob = await new Promise((res) => c.toBlob(res, "image/png"));
+    if (!blob) { alert("PNG化に失敗しました"); return; }
+    // iOSはa[download]無視のため共有シート優先、非対応はBlobを開く(長押し保存可)
+    try {
+      const file = new File([blob], "shift.png", { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: "シフト表" }); return; }
+    } catch {}
+    Object.assign(document.createElement("a"), { download: "shift.png", href: URL.createObjectURL(blob) }).click();
+  } finally { URL.revokeObjectURL(svgUrl); }
 };
 $("btnReset").onclick = () => { if (confirm("初期化しますか?")) { state = defaultState(); save(); renderAll(); } };
 $("btnCsv").onclick = async () => {
