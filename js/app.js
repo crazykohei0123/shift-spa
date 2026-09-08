@@ -177,8 +177,8 @@ function renderShifts() {
 }
 function renderLeave() {
     const ds = dates(), leaves = leaveSet();
-    let h = `<tr><th>名前</th>${ds.map((d) => `<th>${md(d)}<br>(${wday(d)})</th>`).join("")}</tr>`;
-    h += state.members.map((m) => `<tr><td>${esc(m.name)}${m.isLeader ? "★" : ""}</td>${ds.map((d) => {
+    let h = `<tr><th>日付</th>${state.members.map((m) => `<th>${esc(m.name)}${m.isLeader ? "★" : ""}</th>`).join("")}</tr>`;
+    h += ds.map((d) => `<tr><td>${md(d)}(${wday(d)})</td>${state.members.map((m) => {
         const k = m.id + "|" + d;
         const off = leaves.has(k);
         const [af, at] = String(state.avail?.[k] || "").split("-");

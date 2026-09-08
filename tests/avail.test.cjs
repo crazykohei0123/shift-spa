@@ -35,6 +35,14 @@ describe("希望時間", () => {
     assert.doesNotMatch(app.hourOpts(""), /selected/);
   });
 
+  it("希望表は行=日付・列=メンバー (結果表と同じ形式)", () => {
+    const app = loadApp(seed({}));
+    app.renderAll();
+    const html = app.registry["leaveTable"].innerHTML;
+    assert.match(html, /<tr><th>日付<\/th><th>A<\/th><th>B<\/th><\/tr>/);
+    assert.equal((html.match(/<tr><td>09\/01/g) || []).length, 1);
+  });
+
   it("枠と重ならない人は割付られない", () => {
     // Aは午前のみ可、Bは夜のみ可 → 朝=A・夜=Bに決定的に割付られる
     const app = loadApp(seed({ "a|2026-09-01": "09:00-14:00", "b|2026-09-01": "16:00-21:00" }));
