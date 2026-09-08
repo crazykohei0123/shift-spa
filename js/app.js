@@ -174,8 +174,8 @@ function renderLeave() {
         const off = leaves.has(k);
         const [af, at] = String(state.avail?.[k] || "").split("-");
         return `<td class="leave${off ? " off" : ""}">` +
-            `<input type="time" data-av="from" data-m="${m.id}" data-d="${d}" value="${esc(af || "")}" title="開始" ${off ? "disabled" : ""}>` +
-            `<span>〜</span><input type="time" data-av="to" data-m="${m.id}" data-d="${d}" value="${esc(at || "")}" title="終了" ${off ? "disabled" : ""}>` +
+            `<input type="time" step="3600" data-av="from" data-m="${m.id}" data-d="${d}" value="${esc(af || "")}" title="開始" ${off ? "disabled" : ""}>` +
+            `<span>〜</span><input type="time" step="3600" data-av="to" data-m="${m.id}" data-d="${d}" value="${esc(at || "")}" title="終了" ${off ? "disabled" : ""}>` +
             `<button data-off data-m="${m.id}" data-d="${d}" title="休み切替">${off ? "消" : "休"}</button></td>`;
     }).join("")}</tr>`).join("");
     $("leaveTable").innerHTML = h;
