@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>シフト自動作成</title>
-<link rel="stylesheet" href="css/style.css?v=1.2.2">
+<link rel="stylesheet" href="css/style.css?v=1.3.0">
 </head>
 <body>
 <header>
@@ -35,11 +35,11 @@
 </section>
 
 <section class="card">
-<h2>2. メンバー・休み希望</h2>
+<h2>2. メンバー・勤務希望</h2>
 <div class="row">
 <input id="memberName" placeholder="名前を入力" maxlength="20">
 <button id="btnAddMember">+ 追加</button>
-<span class="hint">下の表のマスをクリックで「休」トグル。責=責任者</span>
+<span class="hint">時間は出勤可能な範囲(空=終日可)。休ボタンで「休」トグル。責=責任者</span>
 </div>
 <div id="memberList"></div>
 <div class="table-wrap"><table id="leaveTable"></table></div>
@@ -59,7 +59,7 @@
 </section>
 </main>
 
-<script src="js/app.js?v=1.2.2"></script>
+<script src="js/app.js?v=1.3.0"></script>
 <footer>シフト自動作成 <span id="appVer"></span></footer>
 </body>
 </html>

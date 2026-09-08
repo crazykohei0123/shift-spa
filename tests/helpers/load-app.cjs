@@ -36,7 +36,7 @@ function loadApp(seed) {
   };
   const factory = new Function(
     "document", "localStorage", "confirm", "alert", "prompt", "fetch",
-    SRC + "\nreturn { getState: () => state, dates, autoAssign, renderAll, cellText, tableLayout };"
+    SRC + "\nreturn { getState: () => state, dates, autoAssign, renderAll, cellText, tableLayout, parseRange, fitsAvail };"
   );
   const api = factory(
     document, localStorage,
