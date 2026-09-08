@@ -1,6 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.2.2";
+const APP_VERSION = "1.3.0";
 const $ = (id) => document.getElementById(id);
 const $input = (id) => document.getElementById(id);
 const tgt = (e) => e.target;
@@ -33,6 +33,7 @@ function defaultState() {
             { id: uid(), name: "夜番", time: "16:00-21:00", need: 2, needLeader: 1, stationId: st2 },
         ],
         leaves: [],
+        avail: {},
         result: {},
     };
 }
@@ -53,6 +54,11 @@ if (!state.stations) {
     state.shifts.forEach((s) => (s.stationId = st1));
     save();
 }
+// v1保存データに希望時間がなければ付与
+if (!state.avail) {
+    state.avail = {};
+    save();
+}
 function dates() {
     const out = [];
     if (!state.period.start || !state.period.end)
@@ -70,7 +76,42 @@ const wday = (iso) => "日月火水木金土"[new Date(iso + "T00:00:00").getDay
 const md = (iso) => iso.slice(5).replace("-", "/");
 const memberById = (id) => state.members.find((m) => m.id === id);
 const stationName = (id) => state.stations.find((t) => t.id === id)?.name || "";
-// --- 自動割付: 日付順の貪欲1パス。休み除外→責任者優先→回数少→前日非勤務→ランダム
+// --- 希望時間判定: "H:MM"→分、"H:MM-H:MM"→[from,to]。不正・片側空はnull=制約なし扱い
+function toMin(t) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
+    if (!m)
+        return null;
+    const h = +m[1], mi = +m[2];
+    if (h > 23 || mi > 59)
+        return null;
+    return h * 60 + mi;
+}
+function parseRange(s) {
+    const p = String(s).split("-");
+    if (p.length !== 2)
+        return null;
+    const a = toMin(p[0]), b = toMin(p[1]);
+    if (a === null || b === null || a >= b)
+        return null;
+    return [a, b];
+}
+// 希望時間とシフト枠の重なり分数。希望なし=枠全体、枠の時刻不明=0(全員同列)
+function overlapMin(memberId, date, shiftTime) {
+    const s = parseRange(shiftTime);
+    if (!s)
+        return 0;
+    const r = parseRange(state.avail?.[memberId + "|" + date] || "");
+    if (!r)
+        return s[1] - s[0];
+    return Math.max(0, Math.min(r[1], s[1]) - Math.max(r[0], s[0]));
+}
+// 重なりがあれば割付可。希望なし・時刻の読めない枠は可とする
+function fitsAvail(memberId, date, shiftTime) {
+    if (!parseRange(shiftTime))
+        return true;
+    return overlapMin(memberId, date, shiftTime) > 0;
+}
+// --- 自動割付: 日付順の貪欲1パス。休み・希望時間と重ならない人除外→責任者優先→回数少→重なり大→前日非勤務→ランダム
 function autoAssign() {
     const ds = dates(), counts = {}, result = {};
     state.members.forEach((m) => (counts[m.id] = 0));
@@ -81,10 +122,10 @@ function autoAssign() {
         for (const s of state.shifts) {
             const key = date + "|" + s.id;
             const cand = (onlyLeader) => state.members
-                .filter((m) => !leaves.has(m.id + "|" + date) && !assignedToday.has(m.id))
+                .filter((m) => !leaves.has(m.id + "|" + date) && !assignedToday.has(m.id) && fitsAvail(m.id, date, s.time))
                 .filter((m) => !s.stationId || (m.stationIds || []).includes(s.stationId))
                 .filter((m) => (onlyLeader ? m.isLeader : true))
-                .sort((a, b) => counts[a.id] - counts[b.id] || (prevDay.has(a.id) ? 1 : 0) - (prevDay.has(b.id) ? 1 : 0) || Math.random() - 0.5);
+                .sort((a, b) => counts[a.id] - counts[b.id] || overlapMin(b.id, date, s.time) - overlapMin(a.id, date, s.time) || (prevDay.has(a.id) ? 1 : 0) - (prevDay.has(b.id) ? 1 : 0) || Math.random() - 0.5);
             const picked = [];
             cand(true).slice(0, Math.min(s.needLeader, s.need)).forEach((m) => { picked.push(m.id); assignedToday.add(m.id); });
             cand(false).slice(0, s.need - picked.length).forEach((m) => { picked.push(m.id); assignedToday.add(m.id); });
@@ -129,8 +170,13 @@ function renderLeave() {
     const ds = dates(), leaves = leaveSet();
     let h = `<tr><th>名前</th>${ds.map((d) => `<th>${md(d)}<br>(${wday(d)})</th>`).join("")}</tr>`;
     h += state.members.map((m) => `<tr><td>${esc(m.name)}${m.isLeader ? "★" : ""}</td>${ds.map((d) => {
-        const off = leaves.has(m.id + "|" + d);
-        return `<td class="leave${off ? " off" : ""}" data-m="${m.id}" data-d="${d}">${off ? "休" : ""}</td>`;
+        const k = m.id + "|" + d;
+        const off = leaves.has(k);
+        const [af, at] = String(state.avail?.[k] || "").split("-");
+        return `<td class="leave${off ? " off" : ""}">` +
+            `<input type="time" data-av="from" data-m="${m.id}" data-d="${d}" value="${esc(af || "")}" title="開始" ${off ? "disabled" : ""}>` +
+            `<span>〜</span><input type="time" data-av="to" data-m="${m.id}" data-d="${d}" value="${esc(at || "")}" title="終了" ${off ? "disabled" : ""}>` +
+            `<button data-off data-m="${m.id}" data-d="${d}" title="休み切替">${off ? "消" : "休"}</button></td>`;
     }).join("")}</tr>`).join("");
     $("leaveTable").innerHTML = h;
 }
@@ -234,6 +280,9 @@ $("memberList").onclick = (e) => {
         return;
     state.members = state.members.filter((x) => x.id !== m.id);
     state.leaves = state.leaves.filter((k) => !k.startsWith(m.id + "|"));
+    if (state.avail)
+        Object.keys(state.avail).forEach((k) => { if (k.startsWith(m.id + "|"))
+            delete state.avail[k]; });
     save();
     renderAll();
 };
@@ -302,15 +351,30 @@ $("shiftList").onchange = (e) => {
     renderResult();
 };
 $("leaveTable").onclick = (e) => {
-    const td = tgt(e).closest("td.leave");
-    if (!td)
+    const btn = tgt(e).closest("[data-off]");
+    if (!btn)
         return;
-    const k = (td.dataset["m"] ?? "") + "|" + (td.dataset["d"] ?? "");
+    const k = (btn.dataset["m"] ?? "") + "|" + (btn.dataset["d"] ?? "");
     const set = leaveSet();
     set.has(k) ? set.delete(k) : set.add(k);
     state.leaves = [...set];
     save();
     renderLeave();
+};
+$("leaveTable").onchange = (e) => {
+    const inp = tgt(e);
+    if (!inp.dataset["av"] || !inp.dataset["m"] || !inp.dataset["d"])
+        return;
+    const k = inp.dataset["m"] + "|" + inp.dataset["d"];
+    const cur = String(state.avail?.[k] || "").split("-");
+    const from = inp.dataset["av"] === "from" ? inp.value : (cur[0] || "");
+    const to = inp.dataset["av"] === "to" ? inp.value : (cur[1] || "");
+    state.avail ||= {};
+    if (!from && !to)
+        delete state.avail[k];
+    else
+        state.avail[k] = `${from}-${to}`;
+    save(); // 再描画しない (入力フォーカス維持)
 };
 ($("resultTable").onchange = $("resultTable").onclick = (e) => {
     const t = tgt(e);
