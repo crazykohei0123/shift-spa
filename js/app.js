@@ -1,6 +1,6 @@
 "use strict";
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 const $ = (id) => document.getElementById(id);
 const $input = (id) => document.getElementById(id);
 const tgt = (e) => e.target;
@@ -95,6 +95,15 @@ function parseRange(s) {
         return null;
     return [a, b];
 }
+// 時間セレクト(0〜23時+空)の選択肢。値は"H:00"。旧データ("9:00"/"09:00"/"9:30")も時で照合
+function hourOpts(sel) {
+    const n = /^\d{1,2}/.exec(sel.trim())?.[0];
+    const h = n === undefined ? -1 : +n;
+    let o = `<option value="">—</option>`;
+    for (let i = 0; i < 24; i++)
+        o += `<option value="${i}:00"${i === h ? " selected" : ""}>${i}時</option>`;
+    return o;
+}
 // 希望時間とシフト枠の重なり分数。希望なし=枠全体、枠の時刻不明=0(全員同列)
 function overlapMin(memberId, date, shiftTime) {
     const s = parseRange(shiftTime);
@@ -159,7 +168,7 @@ function renderShifts() {
     $("shiftList").innerHTML = state.shifts.map((s) => `
     <div class="srow" data-id="${s.id}">
       <input type="text" value="${esc(s.name)}" data-k="name" title="シフト名">
-      <input type="text" value="${esc(s.time)}" data-k="time" title="時間帯" placeholder="9:00-13:00">
+      <select data-k="timeFrom" title="開始時">${hourOpts(String(s.time || "").split("-")[0] || "")}</select>〜<select data-k="timeTo" title="終了時">${hourOpts(String(s.time || "").split("-")[1] || "")}</select>
       <select data-k="stationId" title="持ち場">${state.stations.map((t) => `<option value="${t.id}" ${s.stationId === t.id ? "selected" : ""}>${esc(t.name)}</option>`).join("")}</select>
       <label>人数 <input type="number" value="${s.need}" min="1" max="20" data-k="need"></label>
       <label>責任者 <input type="number" value="${s.needLeader}" min="0" max="20" data-k="needLeader"></label>
@@ -174,8 +183,8 @@ function renderLeave() {
         const off = leaves.has(k);
         const [af, at] = String(state.avail?.[k] || "").split("-");
         return `<td class="leave${off ? " off" : ""}">` +
-            `<input type="time" step="3600" data-av="from" data-m="${m.id}" data-d="${d}" value="${esc(af || "")}" title="開始" ${off ? "disabled" : ""}>` +
-            `<span>〜</span><input type="time" step="3600" data-av="to" data-m="${m.id}" data-d="${d}" value="${esc(at || "")}" title="終了" ${off ? "disabled" : ""}>` +
+            `<select data-av="from" data-m="${m.id}" data-d="${d}" title="開始" ${off ? "disabled" : ""}>${hourOpts(af || "")}</select>` +
+            `<span>〜</span><select data-av="to" data-m="${m.id}" data-d="${d}" title="終了" ${off ? "disabled" : ""}>${hourOpts(at || "")}</select>` +
             `<button data-off data-m="${m.id}" data-d="${d}" title="休み切替">${off ? "消" : "休"}</button></td>`;
     }).join("")}</tr>`).join("");
     $("leaveTable").innerHTML = h;
@@ -336,8 +345,11 @@ $("shiftList").onchange = (e) => {
     const v = t.value;
     if (t.dataset["k"] === "name")
         s.name = v;
-    else if (t.dataset["k"] === "time")
-        s.time = v;
+    else if (t.dataset["k"] === "timeFrom" || t.dataset["k"] === "timeTo") {
+        const f = row.querySelector('select[data-k="timeFrom"]')?.value || "";
+        const tt = row.querySelector('select[data-k="timeTo"]')?.value || "";
+        s.time = f || tt ? `${f}-${tt}` : "";
+    }
     else if (t.dataset["k"] === "stationId")
         s.stationId = v;
     else if (t.dataset["k"] === "need")

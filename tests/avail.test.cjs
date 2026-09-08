@@ -27,6 +27,14 @@ describe("希望時間", () => {
     assert.equal(app.parseRange("14:00-9:00"), null);
   });
 
+  it("hourOpts: 旧形式も時で選択表示、空は未選択", () => {
+    const app = loadApp(seed({}));
+    assert.match(app.hourOpts("9:00"), /value="9:00" selected/);
+    assert.match(app.hourOpts("09:00"), /value="9:00" selected/);
+    assert.match(app.hourOpts("9:30"), /value="9:00" selected/);
+    assert.doesNotMatch(app.hourOpts(""), /selected/);
+  });
+
   it("枠と重ならない人は割付られない", () => {
     // Aは午前のみ可、Bは夜のみ可 → 朝=A・夜=Bに決定的に割付られる
     const app = loadApp(seed({ "a|2026-09-01": "09:00-14:00", "b|2026-09-01": "16:00-21:00" }));

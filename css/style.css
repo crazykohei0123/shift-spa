@@ -16,8 +16,8 @@ th{background:#fafafa;position:sticky;top:0}
 td.leave{cursor:pointer;user-select:none;min-width:44px;height:30px}
 td.leave.off{background:#fecaca;font-weight:bold}
 td.leave:not(.off):hover{background:#e0f2fe}
-td.leave input[type=time]{width:88px;border:1px solid #d4d4d8;border-radius:6px;padding:2px 4px}
-td.leave.off input[type=time]{opacity:.4}
+td.leave select{border:1px solid #d4d4d8;border-radius:6px;padding:2px 4px}
+td.leave.off select{opacity:.4}
 td.leave button[data-off]{margin-left:4px}
 td.short{color:#dc2626;font-weight:bold}
 .chip{display:inline-block;background:#e0f2fe;border-radius:10px;padding:1px 4px;margin:1px;font-size:12px}
