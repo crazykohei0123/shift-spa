@@ -1,1 +1,1 @@
-{"name":"shift-spa","version":"1.1.0","private":true,"scripts":{"build":"tsc","test":"npm run build && node --test tests/*.test.cjs"},"devDependencies":{"typescript":"^5.6.0"}}
+{"name":"shift-spa","version":"1.1.0","private":true,"scripts":{"build":"tsc","test":"npm run build && node --test tests/*.test.cjs","test:screenshots":"docker run --rm --user \"$(id -u):$(id -g)\" -v \"$PWD:/work\" -w /work mcr.microsoft.com/playwright:v1.63.0-noble node --test tests/screenshot.test.cjs"},"devDependencies":{"playwright-core":"^1.63.0","typescript":"^5.6.0"}}
