@@ -381,7 +381,6 @@ $("leaveTable").onchange = (e) => {
     const cur = String(state.avail?.[k] || "").split("-");
     const from = inp.dataset["av"] === "from" ? inp.value : (cur[0] || "");
     const to = inp.dataset["av"] === "to" ? inp.value : (cur[1] || "");
-    state.avail ||= {};
     if (!from && !to)
         delete state.avail[k];
     else
