@@ -7,12 +7,7 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const OUT = path.join(ROOT, "test-results");
 
-let pw;
-try {
-  pw = require("playwright-core");
-} catch {
-  pw = null;
-}
+const pw = require("playwright-core");
 
 // FHD=PCの実寸、iPhone 17=CSSビューポート402x874・DPR3
 const DEVICES = [
@@ -52,7 +47,7 @@ function serve() {
   return new Promise((resolve) => server.listen(0, () => resolve(server)));
 }
 
-describe("画面スクショ", { skip: !pw && "playwright-core未導入のためスキップ" }, () => {
+describe("画面スクショ", () => {
   for (const d of DEVICES) {
     it(`${d.name} でindex.htmlを撮影しtest-results/に保存する`, async (t) => {
       const server = await serve();
