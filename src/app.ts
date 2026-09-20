@@ -1,7 +1,7 @@
 "use strict";
 
 const KEY = "shift-spa-v1";
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 
 interface Station { id: string; name: string; }
 interface Member { id: string; name: string; isLeader: boolean; stationIds: string[]; }
@@ -89,7 +89,9 @@ const md = (iso: string): string => iso.slice(5).replace("-", "/");
 const memberById = (id: string): Member | undefined => state.members.find((m) => m.id === id);
 const stationName = (id: string): string => state.stations.find((t) => t.id === id)?.name || "";
 
-// --- 希望時間判定: "H:MM"→分、"H:MM-H:MM"→[from,to]。不正・片側空はnull=制約なし扱い
+// --- 希望時間判定: "H:MM"→分、"H:MM-H:MM"→[from,to]。
+// 両側空・逆順(終了≤開始)はnull=制約なし扱い。
+// 片側のみはその側を一日端まで広げる (開始のみ=その時刻〜24時、終了のみ=0時〜その時刻)。
 function toMin(t: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(t.trim());
   if (!m) return null;
@@ -101,8 +103,9 @@ function parseRange(s: string): [number, number] | null {
   const p = String(s).split("-");
   if (p.length !== 2) return null;
   const a = toMin(p[0]), b = toMin(p[1]);
-  if (a === null || b === null || a >= b) return null;
-  return [a, b];
+  if (a === null && b === null) return null; // 両側空=制約なし
+  if (a !== null && b !== null) return a < b ? [a, b] : null; // 逆順=制約なし
+  return a !== null ? [a, 1440] : [0, b as number]; // 片側=一日端まで
 }
 // 時間セレクト(0〜23時+空)の選択肢。値は"H:00"。旧データ("9:00"/"09:00"/"9:30")も時で照合
 function hourOpts(sel: string): string {
@@ -268,6 +271,11 @@ $("memberList").onclick = (e) => {
   state.members = state.members.filter((x) => x.id !== m.id);
   state.leaves = state.leaves.filter((k) => !k.startsWith(m.id + "|"));
   if (state.avail) Object.keys(state.avail).forEach((k) => { if (k.startsWith(m.id + "|")) delete state.avail[k]; });
+  // 結果表からも除去しないと削除済みIDが人数として数えられ、不足表示が出なくなる
+  Object.keys(state.result).forEach((k) => {
+    state.result[k] = state.result[k].filter((id) => id !== m.id);
+    if (!state.result[k].length) delete state.result[k];
+  });
   save(); renderAll();
 };
 $("memberList").onchange = (e) => {
@@ -323,6 +331,9 @@ $("leaveTable").onchange = (e) => {
   const cur = String(state.avail?.[k] || "").split("-");
   const from = inp.dataset["av"] === "from" ? inp.value : (cur[0] || "");
   const to = inp.dataset["av"] === "to" ? inp.value : (cur[1] || "");
+  // 逆順(終了≤開始)は無効: 制約を落として再描画し、見た目を実際の状態(未設定)に合わせる
+  const f = toMin(from), t = toMin(to);
+  if (f !== null && t !== null && f >= t) { delete state.avail[k]; save(); renderLeave(); return; }
   if (!from && !to) delete state.avail[k];
   else state.avail[k] = `${from}-${to}`;
   save(); // 再描画しない (入力フォーカス維持)
