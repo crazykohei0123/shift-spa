@@ -48,6 +48,29 @@ describe("CRUD・リセット", () => {
     assert.ok(st.leaves.every((k) => !k.startsWith(m.id + "|")));
   });
 
+  it("削除したメンバーは割付結果からも消える (不足表示が正しく出る)", () => {
+    const app = loadApp();
+    app.autoAssign();
+    const before = { ...app.getState().result }; // 浅コピー (ハンドラは同じ結果オブジェクトを書き換える)
+    const m = app.getState().members[0]; // 田中=責任者(朝番に必ず入る)
+    const had = Object.entries(before).filter(([, ids]) => ids.includes(m.id));
+    assert.ok(had.length > 0);
+    fire(app.registry, "memberList", "onclick", { dataset: { act: "del" }, ...row(m.id) });
+    const st = app.getState();
+    // 結果から除去され、枠の実人数も1つ減る (残留すると要N不足表示が出なくなる)
+    for (const [key] of had) {
+      const ids = st.result[key] || [];
+      assert.ok(!ids.includes(m.id));
+      assert.equal(ids.length, before[key].length - 1);
+    }
+    // 朝番(2人枠)は1人になって「要1」の不足表示になる
+    const morning = st.shifts.find((s) => s.name === "朝番");
+    const d = st.period.start;
+    const rest = st.result[d + "|" + morning.id] || [];
+    const restNames = rest.map((id) => st.members.find((x) => x.id === id).name).join("・");
+    assert.deepEqual(app.cellText(d, morning), { top: restNames, bottom: "要1", short: true });
+  });
+
   it("空名のメンバー・持ち場は追加されない", () => {
     const app = loadApp();
     app.document.getElementById("memberName").value = "   ";

@@ -17,3 +17,5 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
+      # npm test が js/app.js を再生成するので、コミット済みの成果物が古いとここで差分が出る
+      - run: git diff --exit-code js/

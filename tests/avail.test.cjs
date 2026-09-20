@@ -23,8 +23,13 @@ describe("希望時間", () => {
     const app = loadApp(seed({}));
     assert.deepEqual(app.parseRange("9:00-14:00"), [540, 840]);
     assert.equal(app.parseRange(""), null);
-    assert.equal(app.parseRange("9:00-"), null);
-    assert.equal(app.parseRange("14:00-9:00"), null);
+    assert.equal(app.parseRange("14:00-9:00"), null); // 逆順=制約なし
+  });
+
+  it("parseRange: 片側は一日端まで広げる", () => {
+    const app = loadApp(seed({}));
+    assert.deepEqual(app.parseRange("9:00-"), [540, 1440]); // 開始のみ=9時〜24時
+    assert.deepEqual(app.parseRange("-14:00"), [0, 840]); // 終了のみ=0時〜14時
   });
 
   it("hourOpts: 旧形式も時で選択表示、空は未選択", () => {
@@ -67,6 +72,23 @@ describe("希望時間", () => {
     app.autoAssign();
     const st = app.getState();
     assert.deepEqual(st.result["2026-09-01|morning"], ["a"]);
+  });
+
+  it("片側だけの希望でも制約になる (9時からのみ可 → 5-9時枠には入らない)", () => {
+    // Aは「9:00-」=9時以降終日可。早朝5-9時枠はAと重ならない → Bが入り、Aは9-14時枠に入る
+    const withEarly = JSON.parse(seed({ "a|2026-09-01": "9:00-" }));
+    withEarly.shifts.unshift({ id: "early", name: "早朝", time: "5:00-9:00", need: 1, needLeader: 0, stationId: "h" });
+    const app = loadApp(JSON.stringify(withEarly));
+    app.autoAssign();
+    const st = app.getState();
+    assert.ok(!(st.result["2026-09-01|early"] || []).includes("a"));
+    assert.deepEqual(st.result["2026-09-01|early"], ["b"]);
+    assert.deepEqual(st.result["2026-09-01|morning"], ["a"]);
+  });
+
+  it("逆順の希望は制約なしとして扱われる", () => {
+    const app = loadApp(seed({ "a|2026-09-01": "18:00-9:00" }));
+    assert.ok(app.fitsAvail("a", "2026-09-01", "5:00-9:00"));
   });
 
   it("希望なしは終日可として割付られる", () => {
